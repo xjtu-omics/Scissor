@@ -17,6 +17,7 @@ import os
 import logging
 from plot import Plot
 import sys
+from utils import merge_fasta
 
 # contigs used to simulate rearrangements, read from chrom size file.
 ALLOWED_CONTIGS = []
@@ -60,16 +61,9 @@ def run(args):
     alt_info = out_dir + '/gr_info.bed'
     writer = open(alt_info, 'w')
     load_allowed_contigs(chrom_size)
-    alt_type_dict = {}
-    try:
-        for line in open(alts_type, 'r'):
-            tmp = line.strip().split("\t")
-            ref = tmp[1]
-            alt = tmp[2]
-            alt_type_dict[tmp[0]] = (ref, alt)
-    except:
-        logging.error("Cannot find the rearrangement type file!")
-        sys.exit(1)
+    alts_dict_by_chrom = initial_var_dict()
+
+    alt_type_dict = load_alts_type_file(alts_type)
 
     # Prepare data for each rearrangement
     events_info = create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size)
@@ -79,8 +73,6 @@ def run(args):
     logging.info("Data prepared for {0} rearrangements".format(len(events_info)))
 
     immutable_ref = pyfaidx.Fasta(os.path.abspath(ref_genome_fa))
-
-    alts_dict_by_chrom = {}
 
     for event, info in events_info.items():
         chrom = info[0]
@@ -99,19 +91,14 @@ def run(args):
         alt_segment_info, alt_sequence, extra_segment_info = create_variant_info(chrom, ref_tokens, alt_tokens, template, int(info[1]), seg_pos_dict, immutable_ref, exclude_region_tree_dict, min_size, max_size)
 
         # rearranged alt sequence of shared segments between reference and variation genome
-        if chrom in alts_dict_by_chrom:
-            alts_dict_by_chrom[chrom].append((info[1], info[2], alt_sequence))
-        else:
-            alts_dict_by_chrom[chrom] = [(info[1], info[2], alt_sequence)]
+        alts_dict_by_chrom[chrom].append((info[1], info[2], alt_sequence))
+
 
         # adding alt sequence of variation unique segments, usually a deletion caused by cut-paste.
         if len(extra_segment_info) > 0:
             for extra_seg, extra_info in extra_segment_info.items():
                 chrom = extra_info[0]
-                if chrom in alts_dict_by_chrom:
-                    alts_dict_by_chrom[chrom].append((extra_info[3], extra_info[4], ''))
-                else:
-                    alts_dict_by_chrom[chrom] = [(extra_info[3], extra_info[4], '')]
+                alts_dict_by_chrom[chrom].append((extra_info[3], extra_info[4], ''))
 
         this_alt = "{0}\t{1}\t{2}".format(info[0], info[1], info[2])
 
@@ -128,11 +115,13 @@ def run(args):
 
         # print("Original sequence length {0}, modified sequence length {1}".format(int(info[2]) - int(info[1]), len(alt_sequence)))
 
-    for chrom in alts_dict_by_chrom.keys():
+    for chrom in ALLOWED_CONTIGS:
         ref_genome_seq = immutable_ref[chrom]
         alt_sequence = concatenate_sequence(alts_dict_by_chrom[chrom], ref_genome_seq)
         logging.info("Modified {0}: {1}, original: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
         write_sequence(out_dir, chrom, alt_sequence)
+
+    merge_fasta(out_dir)
 
 def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size):
     """ Create random regions for rearrangements """
@@ -371,6 +360,26 @@ def get_sequence_from(ref_genome, from_chrom, min_size, max_size, restrict_regio
 
     return from_chrom_seq[sequence_start:sequence_start + sequence_size], sequence_start
 
+def load_alts_type_file(alts_type):
+    alt_type_dict = {}
+    try:
+        for line in open(alts_type, 'r'):
+            tmp = line.strip().split("\t")
+            ref = tmp[1]
+            alt = tmp[2]
+            alt_type_dict[tmp[0]] = (ref, alt)
+    except:
+        logging.error("Cannot find the rearrangement type file!")
+        sys.exit(1)
+
+    return alt_type_dict
+
+def initial_var_dict():
+    var_dict = {}
+    for chrom in ALLOWED_CONTIGS:
+        var_dict[chrom] = []
+    return var_dict
+
 def reverse(sequence):
     """ Create a reverse complementary sequence """
     trans = str.maketrans('ATGC', 'TACG')
@@ -380,6 +389,9 @@ def reverse(sequence):
 
 def concatenate_sequence(var_list, ref_genome_seq):
     """ Build the whole variation genome with rearrangements in var_list """
+
+    if var_list == []:
+        return ref_genome_seq
 
     alt_seq = ''
     sorted_vars = sorted(var_list, key=lambda v:v[1])
