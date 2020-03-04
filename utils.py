@@ -85,5 +85,4 @@ def parse_arguments(arguments):
 def merge_fasta(output):
     with open(output + '/variation_genome.fa', 'w') as out:
         subprocess.call(['cat', os.path.abspath(output + '/*_alt.fa')], stdout=out, stderr=open(os.devnull, 'wb'))
-
     os.remove(output + '/*_alt.fa')
