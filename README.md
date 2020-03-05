@@ -55,13 +55,7 @@ Given the rearrangement file and chromosome size file prepared, we can run SIM w
 
 The program will randomly assign size to each symbol, ranging from 500bp to 10Kbp. This can be set through -l and -u options.
 
-##### Outputs
-
-***variation_genome.fa***: The variation genome hacked by the rearrangements.
-
-***.png***: Dotplots image for each rearrangements.
-
-#### Scissor SHORT/LONG
+#### Scissor short/long
 
 Short/long read sequencing of the variation genome based on wgsim and pbsim.
 
@@ -80,19 +74,80 @@ An example file:
 chr20	0	64444167	50
 ```
 
-##### Run SHORT/LONG
+##### Run short/long
 
 ```
 # Short read sequencing
 Scissor short -g tempalte_reference.fa -v variation_genome.fa -o output_dir/ -f config_file.txt
 
 # Long read sequencing
-Scissor short -g tempalte_reference.fa -v variation_genome.fa -o output_dir/ -f config_file.txt
+Scissor long -g tempalte_reference.fa -v variation_genome.fa -o output_dir/ -f config_file.txt
 ```
 
 ### Use cases
 
+Before we go to certain cases, it has to be aware that CGRs is a cluster of SVs, belonging to one haplotype. Therefore, Scissor only manipulate sequence segments on same haplotype. But you can provide two haplotypes in FASTA format and use one of the haplotypes for CGR simulation.
 
+For example in the ***example_type.txt***, we define two types of CGRs as follows to simulate:
+
+```
+type1	A,B,C,D,#	C^,B,A,C,E	2
+type2	A,B,C,D,#	A,C^,A^,B,D	1
+```
+
+##### Prepare template genome
+
+1. Provide a normal reference genome. Scissor will treat this as a haploid genome by default, and implants CGRs.
+2. Provide diploid genome named with ***h1*** and ***h2***. Scissor will use one haplotype to implant CGRs. Haplotypes ***h1*** and ***h2*** can be hacked by simple SVs, and ensure the SV regions are added to the exclude region file. *Please refer to VISOR if you want to simulate haplotype-aware simple SVs.*
+
+Create the chromosome size file ***chrom.sizes.tsv*** for genome to hack. 
+
+```
+samtools faidx template.fa
+cut -f1,2 template.fa > chrom.sizes.tsv
+```
+
+##### Run sim
+
+By default, the excluded regions contain gaps, centromere, telomere and etc. The default file provided by SVelter (https://github.com/mills-lab/svelter/tree/master/Support).
+
+```
+cd /path/to/work_dir/
+Scissor sim -g ./input/template.fa -s ./input/chrom.sizes.tsv -t ./input/example_type.txt -x ./input/exclude.bed -o ./output/
+```
+
+The output directory will have:
+
+- ***variation_genome.fa***: hacked genome with CGRs.
+- ***.png***: Dotplot view of each CGRs.
+- ***gr_info.bed:*** Detailed information of CGRs, including ***REF*** and ***ALT*** position of each segments, the size of each segment as well as the start and end of the corresponding event. 
+
+##### Run sequencing
+
+In principle, once you have obtained the variation genome in FASTA format. You can also use modules from other tools for sequencing, such as VISOR SHORtS and LASeR. Here we introduce the default sequencing module provided by Scissor.
+
+Prepare the configuration file. 
+
+```
+cd ./output/
+find . -name "*.fa" -exec samtools faidx {} \;
+cut -f1,2 *.fai > var_chrom.sizes.tsv
+# Find the maximum dimenstion for accurate reads count.
+cat var_chrom.sizes.tsv | sort  | awk '$2 > maxvals[$1] {lines[$1]=$0; maxvals[$1]=$2} END { for (tag in lines) print lines[tag] }' > maxdims.tsv
+# Allele fraction is set to be 100 in the case.
+awk 'OFS=FS="\t"''{print $1, "0", $2, "100"}' maxdims.tsv > scissor_config.txt
+```
+
+Start sequencing with required I/O.
+
+```
+cd ./output/ && mkdir long_reads && mkdir long_reads
+# Sequence short reads
+Scissor short -g ./input/template.fa -v ./output/variation_genome.fa -o ./output_dir/short_reads/ -f ./output/config_file.txt
+
+# Sequence long reads
+Scissor long -g ./input/template.fa -v ./output/variation_genome.fa -o ./output_dir/long_reads/ -f ./output/config_file.txt
+```
 
 ### Contact
 
