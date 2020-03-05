@@ -1,3 +1,5 @@
+<img src="https://github.com/jiadong324/Scissor/blob/master/Scissor.png" alt="scissor_logo" style="zoom:0.01%;" align=center/>
+
 ## Scissor: a flexible complex genome rearrangement simulator for short and long reads
 
 Scissor is a flexible tool to simulate self-defined genome rearrangements, including chromothripsis and chromoplexy. Meanwhile, Scissor produces sequence dotplots of altered region for visualization and validation.
