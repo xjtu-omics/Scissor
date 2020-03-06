@@ -121,7 +121,7 @@ def run(args):
         logging.info("Modified {0}: {1}, original: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
         write_sequence(out_dir, chrom, alt_sequence)
 
-    merge_fasta(out_dir)
+    merge_fasta(args.output, args.haploid)
 
 def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size):
     """ Create random regions for rearrangements """
@@ -391,7 +391,7 @@ def concatenate_sequence(var_list, ref_genome_seq):
     """ Build the whole variation genome with rearrangements in var_list """
 
     if var_list == []:
-        return ref_genome_seq
+        return ref_genome_seq[0:len(ref_genome_seq)].seq
 
     alt_seq = ''
     sorted_vars = sorted(var_list, key=lambda v:v[1])

@@ -49,7 +49,7 @@ def main():
         logging.info("Variation genome: {0}".format(options.variation))
         logging.info("Output directory: {0}".format(options.output))
 
-        SEQ.sim_short(options.reference, options.variation, options)
+        SEQ.run(options, 'short')
 
     elif options.command == 'long':
         logging.info("Long read sequencing with pbsim")
@@ -57,7 +57,7 @@ def main():
         logging.info("Variation genome: {0}".format(options.variation))
         logging.info("Output directory: {0}".format(options.output))
 
-        SEQ.sim_long(options.reference, options.variation, options)
+        SEQ.run(options, 'long')
 
 if __name__ == '__main__':
     main()

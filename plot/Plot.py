@@ -13,7 +13,6 @@
 from plot.Sequence import Sequence
 from plot.HashAligner import HashAligner
 from plot.PlotSigleImg import PlotSingleImg
-import datetime
 import logging
 
 

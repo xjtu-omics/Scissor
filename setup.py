@@ -1,9 +1,9 @@
-from distutils.core import setup
+from setuptools import setup,find_packages
 
 setup(
     name='Scissor',
     version='1.0',
-    packages=['plot', 'scissor'],
+    packages=find_packages(),
     url='https://github.com/jiadong324/Scissor',
     license='',
     author='Jiadong Lin, Songbo Wang',

@@ -120,7 +120,7 @@ Scissor sim -g ./input/template.fa -s ./input/chrom.sizes.tsv -t ./input/example
 
 The output directory will have:
 
-- ***variation_genome.fa***: hacked genome with CGRs.
+- ***variation_genome.h1.fa***: hacked genome with CGRs.
 - ***.png***: Dotplot view of each CGRs.
 - ***gr_info.bed:*** Detailed information of CGRs, including ***REF*** and ***ALT*** position of each segments, the size of each segment as well as the start and end of the corresponding event. 
 
