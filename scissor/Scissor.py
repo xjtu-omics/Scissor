@@ -10,7 +10,7 @@
 @time: 2020/3/2
 '''
 
-from utils import *
+from scissor.utils import *
 from scissor import SIM, SEQ
 import sys
 import logging

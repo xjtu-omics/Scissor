@@ -17,7 +17,7 @@ import os
 import logging
 from plot import Plot
 import sys
-from utils import merge_fasta
+from scissor.utils import merge_fasta
 
 # contigs used to simulate rearrangements, read from chrom size file.
 ALLOWED_CONTIGS = []
