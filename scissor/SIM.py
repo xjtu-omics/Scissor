@@ -17,8 +17,6 @@ import os
 import logging
 from plot import Plot
 import sys
-import subprocess
-
 # contigs used to simulate rearrangements, read from chrom size file.
 ALLOWED_CONTIGS = []
 
@@ -29,11 +27,11 @@ def run(args):
     # alts_type = '/mnt/d/Scissor/simulation/wgs/alts_type.txt'
     # ref_genome_fa = '/mnt/d/data/ref_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa'
     # exclude_file = '/mnt/d/Scissor/simulation/grch38.excludeRegions.bed'
-    # out_dir = '/mnt/d/Scissor/simulation/wgs'
+    # out_dir = '/mnt/d/Scissor/simulation/wgs/'
     # chrom_size = '/mnt/d/Scissor/simulation/wgs/grch38.sizes.tsv'
     # min_size = 500
     # max_size = 10000
-
+    # haploid = 'h1'
 
     # Initialize parameters
     alts_type = args.alts
@@ -43,8 +41,9 @@ def run(args):
     chrom_size = args.chromsize
     ref_genome_fa = args.reference
     out_dir = args.output
+    haploid = args.haploid
 
-    logging.basicConfig(filename=os.path.abspath(out_dir + '/Scissor.log'), filemode='w', level=logging.DEBUG,
+    logging.basicConfig(filename=os.path.abspath(out_dir + 'Scissor.log'), filemode='w', level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     print('Initialized .log file ' + os.path.abspath(out_dir + '/Scissor.log\n'))
 
@@ -58,7 +57,7 @@ def run(args):
         logging.error('Reference file does not exist, is not readable or is not a valid .fasta file')
         sys.exit(1)
 
-    alt_info = out_dir + '/gr_info.bed'
+    alt_info = out_dir + 'gr_info.bed'
     writer = open(alt_info, 'w')
     load_allowed_contigs(chrom_size)
     alts_dict_by_chrom = initial_var_dict()
@@ -66,9 +65,7 @@ def run(args):
     alt_type_dict = load_alts_type_file(alts_type)
 
     # Prepare data for each rearrangement
-    events_info = create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size)
-
-    exclude_region_tree_dict = load_exclude_regions(exclude_file)
+    events_info, exclude_region_tree_dict = create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size)
 
     logging.info("Data prepared for {0} rearrangements".format(len(events_info)))
 
@@ -103,9 +100,6 @@ def run(args):
         this_alt = "{0}\t{1}\t{2}".format(info[0], info[1], info[2])
 
         writer.write("{0}\t{1}\t{2}\n".format(this_alt, ref + "," + alt, segment_info_to_string(alt_segment_info)))
-        # region_writer = open(out_dir + "{0}_{1}_{2}.bed".format(info[0], info[1], info[2]), 'w')
-
-        # alt_end = info[1] + len(alt_sequence)
 
         # prepare sequence for dotplot validation
         ref_seq_for_dotplot = chrom_sequence[int(info[1])- 10000:int(info[2]) + 10000]
@@ -113,15 +107,13 @@ def run(args):
 
         Plot.run("{0}_{1}_{2}".format(info[0], info[1], info[2]), ref_seq_for_dotplot, alt_seq_for_dotplot, args)
 
-        # print("Original sequence length {0}, modified sequence length {1}".format(int(info[2]) - int(info[1]), len(alt_sequence)))
-
+    print("Rearrangements implanted, start writing FASTA ...")
+    alt_fasta = out_dir + 'variation_genome.{0}.fa'.format(haploid)
     for chrom in ALLOWED_CONTIGS:
         ref_genome_seq = immutable_ref[chrom]
         alt_sequence = concatenate_sequence(alts_dict_by_chrom[chrom], ref_genome_seq)
         logging.info("Modified {0}: {1}, original: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
-        write_sequence(out_dir, chrom, alt_sequence)
-
-    merge_fasta(args.output, args.haploid)
+        write_sequence(alt_fasta, chrom, alt_sequence)
 
 def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size):
     """ Create random regions for rearrangements """
@@ -156,7 +148,7 @@ def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_siz
 
             event_count += 1
 
-    return events_info_dict
+    return events_info_dict, excluded_regions
 
 def random_region_of_size(size, chromsizes, intervals):
     """ Create a non-overlapping region on the genome of specific size """
@@ -276,8 +268,6 @@ def create_variant_info(this_chrom, ref_tokens, alt_tokens, sequence, sequence_s
                     else:
                         exclude_region_tree[from_chrom_sequence_start: from_chrom_sequence_start + len(from_chrom_sequence)] = (from_chrom_sequence_start, from_chrom_sequence_start + len(from_chrom_sequence))
 
-
-
     # save segment ref info
     for seg in segments_info.keys():
         segments_info[seg].append((this_chrom, segment_pos_dict[seg.replace("^","")][0], -1, '', 'ref'))
@@ -311,6 +301,7 @@ def load_exclude_regions(exclude_file):
         else:
             exclude_region_dict[chrom] = IntervalTree()
             exclude_region_dict[chrom][int(tmp[1]) : int(tmp[2])] = (int(tmp[1]), int(tmp[2]))
+
     return exclude_region_dict
 
 def load_allowed_contigs(chrom_size):
@@ -405,16 +396,9 @@ def concatenate_sequence(var_list, ref_genome_seq):
     alt_seq += ref_genome_seq[sorted_vars[-1][1]:len(ref_genome_seq)].seq
     return alt_seq
 
-def write_sequence(out_dir, chrom, alt_sequence):
-    out_fasta = '{0}{1}_alt.fa'.format(out_dir, chrom)
-    writer = open(out_fasta, 'w')
-    writer.write('>' + chrom + '\n' + alt_sequence)
-    writer.close()
-
-def merge_fasta(output, hap):
-    with open(output + '/variation_genome.{0}.fa'.format(hap), 'w') as out:
-        subprocess.call(['cat', os.path.abspath(output + '/*_alt.fa')], stdout=out, stderr=open(os.devnull, 'wb'))
-    os.remove(output + '/*_alt.fa')
+def write_sequence(out_fasta, chrom, alt_sequence):
+    with open(out_fasta,'a') as faout:
+        faout.write('>' + chrom + '\n' + alt_sequence + '\n')
 
 # if __name__ == '__main__':
 #     run('')
