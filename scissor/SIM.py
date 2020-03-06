@@ -17,7 +17,7 @@ import os
 import logging
 from plot import Plot
 import sys
-from scissor.utils import merge_fasta
+import subprocess
 
 # contigs used to simulate rearrangements, read from chrom size file.
 ALLOWED_CONTIGS = []
@@ -410,6 +410,11 @@ def write_sequence(out_dir, chrom, alt_sequence):
     writer = open(out_fasta, 'w')
     writer.write('>' + chrom + '\n' + alt_sequence)
     writer.close()
+
+def merge_fasta(output, hap):
+    with open(output + '/variation_genome.{0}.fa'.format(hap), 'w') as out:
+        subprocess.call(['cat', os.path.abspath(output + '/*_alt.fa')], stdout=out, stderr=open(os.devnull, 'wb'))
+    os.remove(output + '/*_alt.fa')
 
 # if __name__ == '__main__':
 #     run('')

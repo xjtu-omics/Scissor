@@ -35,7 +35,7 @@ def parse_arguments(arguments):
     required.add_argument('-o', dest='output', help='Output folder', metavar='FOLDER', required=True)
 
     optional = parser_sim.add_argument_group('Optional parameters')
-    optional.add_argument('-h', dest='haploid', help='Which halpotype is used for CGRs [h1, h2, default=h1]', type=str, default='h1')
+    optional.add_argument('-i', dest='haploid', help='Which halpotype is used for CGRs [h1, h2, default=h1]', type=str, default='h1')
     optional.add_argument('-l', dest='min_size', help='Minimum size of sequence segment to modify', type=int, default=500)
     optional.add_argument('-u', dest='max_size',help='Maximum size of sequence segment to modify', type=int, default=10000)
 
@@ -83,7 +83,3 @@ def parse_arguments(arguments):
     return parser.parse_args(arguments)
 
 
-def merge_fasta(output, hap):
-    with open(output + '/variation_genome.{0}.fa'.format(hap), 'w') as out:
-        subprocess.call(['cat', os.path.abspath(output + '/*_alt.fa')], stdout=out, stderr=open(os.devnull, 'wb'))
-    os.remove(output + '/*_alt.fa')
