@@ -94,7 +94,7 @@ def short_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, va
 
     # read altered genome of one chromosome
     with open(os.path.abspath(args.output + 'alt_chrom.fa'), 'w') as regionout:
-        subprocess.call(['samtools', 'faidx', alt_genome_fa, chrom + ':' + str(start) + '-' + str(end)], stdout=regionout, stderr=open(os.devnull, 'wb'))
+        subprocess.call(['samtools', 'faidx', alt_genome_fa, chrom], stdout=regionout, stderr=open(os.devnull, 'wb'))
 
     this_alt_chrom_fa = pyfaidx.Fasta(os.path.abspath(args.output + 'alt_chrom.fa'))
     this_chrom_alt_seq = this_alt_chrom_fa[0:len(this_alt_chrom_fa[chrom])].seq
@@ -109,7 +109,7 @@ def short_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, va
     if vaf != 100:
         # Extract reference genome of this chromosome
         with open(os.path.abspath(args.output + 'reference_chrom.fa'), 'w') as out:
-            subprocess.call(['samtools', 'faidx', ref_genome_fa, chrom + ':' + str(start) + '-' + str(end)], stdout=out, stderr=open(os.devnull, 'wb'))
+            subprocess.call(['samtools', 'faidx', ref_genome_fa, chrom], stdout=out, stderr=open(os.devnull, 'wb'))
 
         alt_reads = round((num_reads / 100) * vaf)
         ref_reads = num_reads - alt_reads
@@ -160,12 +160,12 @@ def long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, vaf
 
     # read altered genome of one chromosome
     with open(os.path.abspath(args.output + 'alt_chrom.fa'), 'w') as regionout:
-        subprocess.call(['samtools', 'faidx', alt_genome_fa, chrom + ':' + str(start) + '-' + str(end)], stdout=regionout, stderr=open(os.devnull, 'wb'))
+        subprocess.call(['samtools', 'faidx', alt_genome_fa, chrom], stdout=regionout, stderr=open(os.devnull, 'wb'))
 
     if vaf != 100:
         # Extract reference genome of this chromosome
         with open(os.path.abspath(args.output + 'reference_chrom.fa'), 'w') as out:
-            subprocess.call(['samtools', 'faidx', ref_genome_fa, chrom + ':' + str(start) + '-' + str(end)], stdout=out, stderr=open(os.devnull, 'wb'))
+            subprocess.call(['samtools', 'faidx', ref_genome_fa, chrom], stdout=out, stderr=open(os.devnull, 'wb'))
 
         alt_cov = (args.cov / 100) * vaf
         ref_cov = args.cov - alt_cov
