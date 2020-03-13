@@ -92,7 +92,11 @@ Scissor long -g tempalte_reference.fa -v variation_genome.fa -o output_dir/ -f c
 
 ### Use cases
 
-Before we go to certain cases, it has to be aware that CGRs is a cluster of SVs, belonging to one haplotype. Therefore, Scissor only manipulate sequence segments on same haplotype. But you can provide two haplotypes in FASTA format and use one of the haplotypes for CGR simulation.
+Before we go to certain cases, it has to be aware that CGRs is a cluster of SVs, belonging to one haplotype. Therefore, Scissor only manipulate sequence segments on same haplotype. There are three FASTA files will be used in Scissor workflow:
+
+- template.fa: sequence where CGRs are implanted.
+- variation.fa: sequence with CGRs.
+- reference.fa: normal reference genome. It can be used as the template sequence.
 
 #### Scissor common workflow
 
@@ -126,7 +130,7 @@ Scissor sim -g ./input/template.fa -s ./input/chrom.sizes.tsv -t ./input/example
 
 The output directory will have:
 
-- ***variation_genome.h1.fa***: hacked genome with CGRs (h1 is default haplotype).
+- ***alt_h1.fa***: hacked genome with CGRs (h1 is default haplotype).
 - ***.png***: Dotplot view of each CGRs.
 - ***gr_info.bed:*** Detailed information of CGRs, including ***REF*** and ***ALT*** position of each segments, the size of each segment as well as the start and end of the corresponding event. 
 
@@ -151,10 +155,10 @@ Start sequencing with required I/O.
 ```
 cd ./output/ && mkdir long_reads && mkdir long_reads
 # Sequence short reads
-Scissor short -g ./input/template.fa -v ./output/variation_genome.fa -o ./output_dir/short_reads/ -f ./output/config_file.txt
+Scissor short -g ./input/reference.fa -v ./output/variation_genome.fa -o ./output_dir/short_reads/ -f ./output/config_file.txt
 
 # Sequence long reads
-Scissor long -g ./input/template.fa -v ./output/variation_genome.fa -o ./output_dir/long_reads/ -f ./output/config_file.txt
+Scissor long -g ./input/reference.fa -v ./output/variation_genome.fa -o ./output_dir/long_reads/ -f ./output/config_file.txt
 ```
 
 #### Scissor with VISOR
@@ -181,7 +185,7 @@ cat exclude.bed hack.h1.bed hack.h2.bed | sortBed > exclude_new.bed
 Scissor sim -g ./input/h1.fa -s ./input/chrom.sizes.tsv -t ./input/example_type.txt -x ./input/exclude_new.bed -o ./path/to/work_dir/output/
 
 cd output/
-mv variation_genome.h1.fa alt_h1.fa && mv h2.fa /output/alt_h2.fa
+mv h2.fa /output/alt_h2.fa
 ```
 
 Next we sequence the diploid genome:

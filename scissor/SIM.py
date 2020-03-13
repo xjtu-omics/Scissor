@@ -17,6 +17,8 @@ import os
 import logging
 from plot import Plot
 import sys
+
+
 # contigs used to simulate rearrangements, read from chrom size file.
 ALLOWED_CONTIGS = []
 
@@ -45,7 +47,7 @@ def run(args):
 
     logging.basicConfig(filename=os.path.abspath(out_dir + 'Scissor.log'), filemode='w', level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    print('Initialized .log file ' + os.path.abspath(out_dir + '/Scissor.log\n'))
+    print('Initialized .log file ' + os.path.abspath(out_dir + 'Scissor.log\n'))
 
     try:
 
@@ -108,7 +110,7 @@ def run(args):
         Plot.run("{0}_{1}_{2}".format(info[0], info[1], info[2]), ref_seq_for_dotplot, alt_seq_for_dotplot, args)
 
     print("Rearrangements implanted, start writing FASTA ...")
-    alt_fasta = out_dir + 'variation_genome.{0}.fa'.format(haploid)
+    alt_fasta = out_dir + 'alt_{0}.fa'.format(haploid)
     for chrom in ALLOWED_CONTIGS:
         ref_genome_seq = immutable_ref[chrom]
         alt_sequence = concatenate_sequence(alts_dict_by_chrom[chrom], ref_genome_seq)
