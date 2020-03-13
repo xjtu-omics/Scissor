@@ -14,6 +14,7 @@ from plot.Sequence import Sequence
 from plot.HashAligner import HashAligner
 from plot.PlotSigleImg import PlotSingleImg
 import logging
+import os
 
 
 def run(var_id, ref, seq, args):
@@ -46,6 +47,8 @@ def run(var_id, ref, seq, args):
     ref_length = ref.length()
 
     # plot imgs
+    # plots_dir = os.path.join(args.output, '/plots')
+    # os.mkdir(plots_dir)
     img_out = args.output + '/{0}.png'.format(var_id)
     PlotSingleImg(segments, read_length, ref_length, img_out, var_id)
 

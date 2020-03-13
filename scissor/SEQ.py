@@ -57,18 +57,14 @@ def sim_short(ref_genome_fa, alt_genome_fa, label, args):
         short_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, vaf, args)
 
     # combine all chroms of short reads
-    with open(args.output + 'sr.r1.fq', 'w') as out:
-        subprocess.call(['cat', os.path.abspath(args.output + '*.tmp1.fq')], stdout=out, stderr=open(os.devnull, 'wb'))
-
-    with open(args.output + 'sr.r2.fq', 'w') as out:
-        subprocess.call(['cat', os.path.abspath(args.output + '*.tmp2.fq')], stdout=out, stderr=open(os.devnull, 'wb'))
+    merge_fq(args.output, 'short')
 
     os.remove(os.path.abspath(args.output + '*.tmp1.fq'))
     os.remove(os.path.abspath(args.output + '*.tmp2.fq'))
 
     # Do the alignment
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
-        subprocess.call(['bwa', 'mem', '-t', str(args.threads), ref_genome_fa, os.path.abspath(args.output + 'sr.r1.fq'), os.path.abspath(args.output + 'sr.r2.fq')], stdout=samout, stderr=open(os.devnull, 'wb'))
+        subprocess.call(['bwa', 'mem', '-t', str(args.threads), ref_genome_fa, os.path.abspath(args.output + 'short.r1.fq'), os.path.abspath(args.output + 'short.r2.fq')], stdout=samout, stderr=open(os.devnull, 'wb'))
 
     convert_sam(label, args.threads, args.output)
 
@@ -84,8 +80,8 @@ def sim_long(ref_genome_fa, alt_genome_fa, label, args):
         long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, vaf, args)
 
     # combine all chroms of long reads
-    with open(args.output + '/lr.fq', 'w') as out:
-        subprocess.call(['cat', os.path.abspath(args.output + '*.sim_0001.fq')], stdout=out, stderr=open(os.devnull, 'wb'))
+    merge_fq(args.output, 'long')
+    os.remove(os.path.abspath(args.output + '*.sim_0001.fq'))
 
     # Do the alignment
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
@@ -207,6 +203,24 @@ def long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, vaf
         os.remove(os.path.abspath(args.output + 'alt_chrom.fa'))
         os.remove(os.path.abspath(args.output + '{0}.sim_0001.ref'.format(chrom)))
         os.remove(os.path.abspath(args.output + '{0}.sim_0001.maf'.format(chrom)))
+
+def merge_fq(output, seqtype):
+    if seqtype == 'short':
+        merged_r1_fq = open(os.path.join(output, '{0}.r1.fq').format(seqtype), 'w')
+        merged_r2_fq = open(os.path.join(output, '{0}.r2.fq').format(seqtype), 'w')
+        for file in os.listdir(output):
+            if file.endswith('.tmp1.fq'):
+                cmd = 'cat %s >> %s'%(os.path.join(output, file), merged_r1_fq)
+                subprocess.call(cmd, shell=True)
+            elif file.endswith('.tmp2.fq'):
+                cmd = 'cat %s >> %s' % (os.path.join(output, file), merged_r2_fq)
+                subprocess.call(cmd, shell=True)
+    elif seqtype == 'long':
+        merged_fq = open(os.path.join(output, '{0}.fq').format(seqtype), 'w')
+        for file in os.listdir(output):
+            if file.endswith('.sim_0001.fq'):
+                cmd = 'cat %s >> %s' % (os.path.join(output, file), merged_fq)
+                subprocess.call(cmd, shell=True)
 
 
 def convert_sam(label, threads, output):
