@@ -15,11 +15,12 @@ from scissor import SIM, SEQ
 import sys
 import logging
 import os
+import subprocess
 
 
 def main():
 
-    options = parse_arguments(sys.argv[1:])
+    options = parse_arguments()
 
     # external_tools = ['wgsim', 'pbsim']
     #
@@ -40,8 +41,14 @@ def main():
         logging.info("Template reference genome: {0}".format(options.reference))
         logging.info("Output directory: {0}".format(options.output))
 
-        SIM.run(options)
+        # Remove previous results under the directory
+        files = os.listdir(options.output)
+        if 'alt.h1.fa' in files:
+            subprocess.call(['rm', os.path.join(options.output, 'alt.h1.fa')])
+        elif 'alt.h2.fa' in files:
+            subprocess.call(['rm', os.path.join(options.output, 'alt.h2.fa')])
 
+        SIM.run(options)
 
     elif options.command == 'short':
         logging.info("Short read sequencing with wgsim")

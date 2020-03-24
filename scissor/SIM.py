@@ -26,13 +26,13 @@ def run(args):
 
     """ The main function for simulating rearrangements """
     ## Debug usage
-    # alts_type = '/mnt/d/Scissor/simulation/wgs/alts_type.txt'
-    # ref_genome_fa = '/mnt/d/data/ref_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa'
+    # alts_type = '/mnt/d/Scissor/simulation/chr20/alts_type.txt'
+    # ref_genome_fa = '/mnt/d/Scissor/simulation/chr20/chr20.ref.fa'
     # exclude_file = '/mnt/d/Scissor/simulation/grch38.excludeRegions.bed'
-    # out_dir = '/mnt/d/Scissor/simulation/wgs/'
-    # chrom_size = '/mnt/d/Scissor/simulation/wgs/grch38.sizes.tsv'
+    # out_dir = '/mnt/d/Scissor/simulation/chr20/'
+    # chrom_size = '/mnt/d/Scissor/simulation/chr20/chr20.dim.tsv'
     # min_size = 500
-    # max_size = 10000
+    # max_size = 5000
     # haploid = 'h1'
 
     # Initialize parameters
@@ -65,13 +65,12 @@ def run(args):
     alts_dict_by_chrom = initial_var_dict()
 
     alt_type_dict = load_alts_type_file(alts_type)
+    immutable_ref = pyfaidx.Fasta(os.path.abspath(ref_genome_fa))
 
     # Prepare data for each rearrangement
-    events_info, exclude_region_tree_dict = create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size)
+    events_info, exclude_region_tree_dict = create_random_regions(immutable_ref, alts_type, min_size, max_size, exclude_file, chrom_size)
 
     logging.info("Data prepared for {0} rearrangements".format(len(events_info)))
-
-    immutable_ref = pyfaidx.Fasta(os.path.abspath(ref_genome_fa))
 
     for event, info in events_info.items():
         chrom = info[0]
@@ -99,9 +98,12 @@ def run(args):
                 chrom = extra_info[0]
                 alts_dict_by_chrom[chrom].append((extra_info[3], extra_info[4], ''))
 
-        this_alt = "{0}\t{1}\t{2}".format(info[0], info[1], info[2])
+        # refine breakpoints
+        bp_start, bp_end, seg_info_str = get_event_info(alt_segment_info, seg_pos_dict)
 
-        writer.write("{0}\t{1}\t{2}\n".format(this_alt, ref + "," + alt, segment_info_to_string(alt_segment_info)))
+        this_alt = "{0}\t{1}\t{2}".format(info[0], bp_start, bp_end)
+
+        writer.write("{0}\t{1}\t{2}\t{3}\n".format(this_alt, ref[:-2], alt, seg_info_str))
 
         # prepare sequence for dotplot validation
         ref_seq_for_dotplot = chrom_sequence[int(info[1])- 10000:int(info[2]) + 10000]
@@ -110,14 +112,14 @@ def run(args):
         Plot.run("{0}_{1}_{2}".format(info[0], info[1], info[2]), ref_seq_for_dotplot, alt_seq_for_dotplot, args)
 
     print("Rearrangements implanted, start writing FASTA ...")
-    alt_fasta = out_dir + 'alt_{0}.fa'.format(haploid)
+    alt_fasta = out_dir + 'alt.{0}.fa'.format(haploid)
     for chrom in ALLOWED_CONTIGS:
         ref_genome_seq = immutable_ref[chrom]
         alt_sequence = concatenate_sequence(alts_dict_by_chrom[chrom], ref_genome_seq)
         logging.info("Modified {0}: {1}, original: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
         write_sequence(alt_fasta, chrom, alt_sequence)
 
-def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_size):
+def create_random_regions(ref_genome, alts_type, min_size, max_size, exclude_file, chrom_size):
     """ Create random regions for rearrangements """
 
     excluded_regions = load_exclude_regions(exclude_file)
@@ -134,7 +136,8 @@ def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_siz
         for i in range(num_events):
             ref_seg_sizes = create_segment_size(ref_tokens, min_size, max_size)
             # Find a non-overlapping position for this rearrangement
-            chrom, start, end = random_region_of_size(sum(ref_seg_sizes), chrom_size_dict, excluded_regions)
+            chrom, start, end = random_region_of_size(ref_genome, sum(ref_seg_sizes), chrom_size_dict, excluded_regions)
+
             # add this region to the current chrom interval tree
             excluded_regions[chrom][start:end] = (start, end)
             id = "{0}_{1}_{2}_GR{3}".format(chrom, start, end, event_count)
@@ -152,7 +155,7 @@ def create_random_regions(alts_type, min_size, max_size, exclude_file, chrom_siz
 
     return events_info_dict, excluded_regions
 
-def random_region_of_size(size, chromsizes, intervals):
+def random_region_of_size(ref_genome, size, chromsizes, intervals):
     """ Create a non-overlapping region on the genome of specific size """
 
     chrom_idx = np.random.randint(0, len(chromsizes))
@@ -160,10 +163,11 @@ def random_region_of_size(size, chromsizes, intervals):
     chrom_size = chromsizes[chrom]
     interval_tree_this_chrom = intervals[chrom]
 
+    this_chrom = ref_genome[chrom]
     start_pos = np.random.randint(50000, chrom_size - size)
     overlapped = interval_tree_this_chrom.overlap(start_pos, start_pos + size)
 
-    while overlapped:
+    while overlapped or invalid_sequence(this_chrom[start_pos:start_pos + size].seq):
         start_pos = np.random.randint(0, chrom_size - size)
         overlapped = interval_tree_this_chrom.overlap(start_pos, start_pos + size)
 
@@ -211,9 +215,8 @@ def create_variant_info(this_chrom, ref_tokens, alt_tokens, sequence, sequence_s
                 from_chrom = new_segment_info[0]
                 from_chrom_sequence, from_chrom_sequence_start = new_segment_info[2], new_segment_info[3]
                 alt_sequence += from_chrom_sequence
-
-                if new_segment_info[1] == 'cut':
-                    alt_extra_segments[alt_segment] = new_segment_info
+                # if new_segment_info[1] == 'cut':
+                alt_extra_segments[alt_segment] = new_segment_info
 
                 # update new altered segment position
                 if i > 0:
@@ -252,8 +255,8 @@ def create_variant_info(this_chrom, ref_tokens, alt_tokens, sequence, sequence_s
                 new_segment_info = create_jump_segment(ref_genome, exclude_region_tree, min_size, max_size, 'fwd')
                 from_chrom = new_segment_info[0]
                 from_chrom_sequence, from_chrom_sequence_start = new_segment_info[2], new_segment_info[3]
-                if new_segment_info[1] == 'cut':
-                    alt_extra_segments[alt_segment] = new_segment_info
+
+                alt_extra_segments[alt_segment] = new_segment_info
                 alt_sequence += from_chrom_sequence
 
                 # update new altered segment position
@@ -277,6 +280,7 @@ def create_variant_info(this_chrom, ref_tokens, alt_tokens, sequence, sequence_s
     # adding novel segment
     for seg_symbol, info in alt_extra_segments.items():
         alt_pos = alt_segments_pos[alt_tokens.index(seg_symbol)]
+
         segments_info[seg_symbol] = [(this_chrom, alt_pos, info[3] + len(info[2]), info[2], 'alt'), (info[0], info[3], info[3] + len(info[2]), '', 'ref')]
 
     return segments_info, alt_sequence, alt_extra_segments
@@ -312,17 +316,24 @@ def load_allowed_contigs(chrom_size):
         tmp = line.strip().split('\t')
         ALLOWED_CONTIGS.append(tmp[0])
 
-def segment_info_to_string(alt_segment_dict):
+
+def get_event_info(alt_segment_dict, ref_segment_info):
     """ Convert the segment information of current chromosome to string for output """
 
-    out_str = ""
+    seg_info = ""
+
     for segment, vars_info in alt_segment_dict.items():
-        alt_infos = []
         alt_info = vars_info[0]
         ref_info = vars_info[-1]
-        out_str += "SEG={0},{1},ALT={2},{3},REF={4},{5};".format(segment, len(alt_info[3]), alt_info[0], alt_info[1], ref_info[0], ref_info[1])
+        seg_info += "SEG={0},{1},ALT={2},{3},REF={4},{5};".format(segment, len(alt_info[3]), alt_info[0], alt_info[1], ref_info[0], ref_info[1])
 
-    return out_str[:-1]
+
+    left_anchor_seg = list(ref_segment_info.values())[0]
+    right_anchor_seg = list(ref_segment_info.values())[-1]
+    start = left_anchor_seg[0] + left_anchor_seg[1]
+    end = right_anchor_seg[0]
+
+    return start, end, seg_info[:-1]
 
 def create_segment_size(ref_symbol, min_size, max_size):
     """ Randomly assign size between [min_size, max_size] to a segment """
@@ -347,11 +358,15 @@ def get_sequence_from(ref_genome, from_chrom, min_size, max_size, restrict_regio
     sequence_start = np.random.randint(10000, len(from_chrom_seq) - 10000)
     sequence_size = np.random.randint(min_size, max_size)
 
-    while restrict_region_tree.overlap(sequence_start, sequence_start + sequence_size):
+    while restrict_region_tree.overlap(sequence_start, sequence_start + sequence_size) or invalid_sequence(from_chrom_seq[sequence_start:sequence_start + sequence_size]):
+
         sequence_start = np.random.randint(10000, len(from_chrom_seq) - 10000)
-        sequence_size = np.random.randint(1000, 50000)
+        sequence_size = np.random.randint(min_size, max_size)
 
     return from_chrom_seq[sequence_start:sequence_start + sequence_size], sequence_start
+
+def invalid_sequence(seq):
+    return 'N' in seq
 
 def load_alts_type_file(alts_type):
     alt_type_dict = {}

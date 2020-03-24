@@ -11,11 +11,9 @@
 '''
 
 import argparse
-import subprocess
 from argparse import RawTextHelpFormatter
-import os
 
-def parse_arguments(arguments):
+def parse_arguments():
 
 
     parser = argparse.ArgumentParser(prog='Scissor', description='''Complex genome rearrangement simulator.''',
@@ -52,18 +50,27 @@ def parse_arguments(arguments):
 
     required.add_argument('-g', dest='reference', help='Template reference genome', metavar='FASTA', required=True)
     required.add_argument('-v', dest='variation', help='Simulated variation genome', metavar='FOLDER', required=True)
-    required.add_argument('-o', dest='output', help='Output folder for simulated FASTQ', metavar='FOLDER', required=True)
-    required.add_argument('-f', dest='config', help='A configure file for sequencing the alteration genome', metavar='BED', required=True)
+    required.add_argument('-o', dest='output', help='Output folder for simulated FASTQ', metavar='FOLDER',
+                          required=True)
+    required.add_argument('-f', dest='config', help='A configure file for sequencing the alteration genome',
+                          metavar='BED', required=True)
+    required.add_argument('-n', dest='prefix', help='The prefix of aligned file name', metavar='STRING', required=True)
 
-    wgsim = parser_short.add_argument_group('wgsim parameters for FASTQ simulations')
-    wgsim.add_argument('-t', dest='threads', help='Number of cores used for alignment [4]', metavar='', default=4, type=int)
-    wgsim.add_argument('-c', dest='coverage', help='Mean coverage for the simulated region [30.0]', metavar='', default=30.0, type=float)
+    wgsim = parser_short.add_argument_group('wgsim parameters')
+    wgsim.add_argument('-t', dest='threads', help='Number of cores used for alignment [4]', metavar='', default=4,
+                       type=int)
+    wgsim.add_argument('-c', dest='coverage', help='Mean coverage for the simulated region [30.0]', metavar='',
+                       default=30.0, type=float)
     wgsim.add_argument('-e', dest='error', help='Base error rate [0.010]', metavar='', default=0.010, type=float)
-    wgsim.add_argument('-l', dest='length', help='Length of reads [150]', metavar='', default=150, type=int)
-    wgsim.add_argument('-i', dest='indels', help='Fractions of indels [0.000000001]', metavar='', default=0.000000001,type=float)
-    wgsim.add_argument('-p', dest='probability', help='Probability an indel is extended [0.000000001]', metavar='', default=0.000000001, type=float)
-    wgsim.add_argument('-is', dest='insertsize', help='0uter distance between the two ends [500]', metavar='', default=500,type=int)
-    wgsim.add_argument('-sd', dest='standardev', help='Standard deviation for insert size [50]', metavar='', default=50,type=int)
+    wgsim.add_argument('-l', dest='read_length', help='Length of reads [150]', metavar='', default=150, type=int)
+    wgsim.add_argument('-i', dest='indels', help='Fractions of indels [0.000000001]', metavar='', default=0.000000001,
+                       type=float)
+    wgsim.add_argument('-p', dest='probability', help='Probability an indel is extended [0.000000001]', metavar='',
+                       default=0.000000001, type=float)
+    wgsim.add_argument('-is', dest='insertsize', help='0uter distance between the two ends [500]', metavar='',
+                       default=500, type=int)
+    wgsim.add_argument('-sd', dest='standarddev', help='Standard deviation for insert size [50]', metavar='',
+                       default=50, type=int)
 
     # long read sequencing
     parser_long = subparsers.add_parser('long', help='Long read sequencing of variation genome.')
@@ -73,13 +80,17 @@ def parse_arguments(arguments):
     required.add_argument('-v', dest='variation', help='Simulated variation genome', metavar='FASTA', required=True)
     required.add_argument('-o', dest='output', help='Output folder for simulated FASTQ', metavar='FOLDER',required=True)
     required.add_argument('-f', dest='config', help='A configure file for sequencing the alteration genome',metavar='BED', required=True)
+    required.add_argument('-n', dest='prefix', help='The prefix of aligned file name', metavar='STRING', required=True)
 
     pbsim = parser_long.add_argument_group('pbsim parameters for FASTQ simulations')
+    pbsim.add_argument('-t', dest='seq', help='Long read (clr/ccs) sequencing technology [clr]', metavar='', default='clr')
     pbsim.add_argument('-c', dest='coverage', help='Mean coverage for the simulated region [20]', metavar='', default=20.0,type=float)
-    pbsim.add_argument('-a', dest='accuracy', help='Mean accuracy for simulated reads [0.90]', metavar='', default=0.90,type=float)
+    pbsim.add_argument('-a', dest='accuracy', help='Mean for simulated reads [0.90]', metavar='', default=0.90,type=float)
     pbsim.add_argument('-l', dest='length', help='Mean length for simulated reads [8000]', metavar='', default=8000,type=int)
     pbsim.add_argument('-r', dest='ratio', help='substitution:insertion:deletion ratio [30:30:40]', metavar='',default='30:30:40', type=str)
 
-    return parser.parse_args(arguments)
+
+
+    return parser.parse_args()
 
 
