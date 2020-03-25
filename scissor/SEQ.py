@@ -14,9 +14,14 @@ import pyfaidx
 import os
 import subprocess
 import glob
-from Bio import SeqIO
+import logging
+import sys
 
 def run(args, seqtype):
+    logging.basicConfig(filename=os.path.abspath(args.output + '/Scissor_SEQ.log'), filemode='w', level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+    print('Initialized .log file ' + os.path.abspath(args.output + '/Scissor_SEQ.log'))
 
     label = 1
     for file in os.listdir(args.variation):
@@ -56,7 +61,7 @@ def sim_short(ref_genome_fa, alt_genome_fa, label, args):
     for line in open(args.config, 'r'):
         tmp = line.strip().split("\t")
         chrom = tmp[0]
-        print("Start sequencing chrom: ", chrom)
+        logging.info("Start sequencing chrom: ", chrom)
         start = int(tmp[1])
         end = int(tmp[2])
         vaf = float(tmp[3])
@@ -66,7 +71,18 @@ def sim_short(ref_genome_fa, alt_genome_fa, label, args):
     merge_fq(args.output, 'short')
 
     # Do the alignment
-    print("Start align reads ...")
+    logging.info("Start align {0} to reference {1}".format("short.r1.fq and short.r2.fq", os.path.abspath(ref_genome_fa)))
+
+    if not os.path.exists(os.path.abspath(ref_genome_fa + '.sa')):
+        try:
+
+            logging.info('Creating bwa index for ' + os.path.abspath(ref_genome_fa))
+            bwa_index(os.path.abspath(ref_genome_fa))
+
+        except:
+            logging.error('It was not possible to generate bwa index for ' + os.path.abspath(ref_genome_fa))
+            sys.exit(1)
+
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
         subprocess.call(['bwa', 'mem', '-t', str(args.threads), ref_genome_fa, os.path.abspath(args.output + 'short.r1.fq'), os.path.abspath(args.output + 'short.r2.fq')], stdout=samout, stderr=open(os.devnull, 'wb'))
 
@@ -81,9 +97,12 @@ def sim_long(ref_genome_fa, alt_genome_fa, label, args):
     if args.seq:
         model_qc = os.path.abspath(os.path.dirname(__file__) + '/model_qc_ccs')
 
+    logging.info("Simulate reads with model ", model_qc)
+
     for line in open(args.config, 'r'):
         tmp = line.strip().split("\t")
         chrom = tmp[0]
+        logging.info("Start sequencing chrom: ", chrom)
         vaf = float(tmp[3])
         long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, vaf, args, model_qc)
 
@@ -91,6 +110,18 @@ def sim_long(ref_genome_fa, alt_genome_fa, label, args):
     merge_fq(args.output, 'long')
 
     # Do the alignment
+    logging.info("Start align {0} to reference {1}".format("long.fq", os.path.abspath(ref_genome_fa)))
+
+    if not os.path.exists(os.path.abspath(ref_genome_fa + '.sa')):
+        try:
+
+            logging.info('Creating bwa index for ' + os.path.abspath(ref_genome_fa))
+            bwa_index(os.path.abspath(ref_genome_fa))
+
+        except:
+            logging.error('It was not possible to generate bwa index for ' + os.path.abspath(ref_genome_fa))
+            sys.exit(1)
+
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
         subprocess.call(['ngmlr', '-t', str(args.threads), '-r', ref_genome_fa, '-q', args.output + 'long.fq'], stdout=samout, stderr=open(os.devnull, 'wb'))
 
@@ -243,6 +274,8 @@ def merge_fq(output, seqtype):
             cmd = ['cat'] + r2_files
             subprocess.call(cmd, stdout=merged_r2_fq)
 
+        logging.info("All sequenced reads merged to {0},{1}".format(os.path.join(output, "short.r1.fq"), os.path.join(output, "short.r2.fq")))
+
         rm_cmd = ['rm'] + r1_files + r2_files
         subprocess.call(rm_cmd)
 
@@ -256,7 +289,14 @@ def merge_fq(output, seqtype):
             cmd = ['cat'] + fq_files
             subprocess.call(cmd, stdout=merged_fq)
 
+        logging.info("All sequenced reads merged to {0}".format(os.path.join(output, "long.fq")))
+
+def bwa_index(fasta):
+    subprocess.call(['bwa', 'index', os.path.abspath(fasta)], stdout=open(os.devnull, 'wb'), stderr=open(os.devnull, 'wb'))
+
 def convert_sam(label, threads, output):
+
+    logging.info("Sort alignment and index")
 
     with open(os.path.join(output, 'tmp.bam'), 'w') as bamout:
         subprocess.call(['samtools', 'view', '-b', os.path.join(output, 'tmp.sam')], stdout=bamout, stderr=open(os.devnull, 'wb'))
@@ -265,9 +305,4 @@ def convert_sam(label, threads, output):
 
     with open(os.path.abspath(output + label + '.srt.bam'), 'w') as srtbamout:
         subprocess.call(['samtools', 'sort', '-@', str(threads - 1), os.path.join(output, 'tmp.bam')], stdout=srtbamout, stderr=open(os.devnull, 'wb'))
-
-    print("Alignment sorted ...")
-
     os.remove(os.path.abspath(output + 'tmp.bam'))
-
-    # subprocess.call(['samtools', 'index', os.path.abspath(output + label + '.tmp.srt.bam')], stderr=open(os.devnull, 'wb'))

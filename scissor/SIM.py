@@ -45,7 +45,7 @@ def run(args):
     out_dir = args.output
     haploid = args.haploid
 
-    logging.basicConfig(filename=os.path.abspath(out_dir + 'Scissor.log'), filemode='w', level=logging.DEBUG,
+    logging.basicConfig(filename=os.path.abspath(out_dir + 'Scissor_SIM.log'), filemode='w', level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     print('Initialized .log file ' + os.path.abspath(out_dir + 'Scissor.log\n'))
 
