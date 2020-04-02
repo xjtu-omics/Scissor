@@ -125,7 +125,7 @@ def long_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
         subprocess.call(['ngmlr', '-t', str(args.threads), '-r', ref_genome_fa, '-q', args.output + 'long.fq'], stdout=samout, stderr=open(os.devnull, 'wb'))
 
-    convert_sam(str(label), args.cores, args.output)
+    convert_sam(str(label), args.threads, args.output)
 
 def short_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, start, end, vaf, args):
     """ Create short reads for each chromosome with wgsim """
