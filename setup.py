@@ -11,5 +11,6 @@ setup(
     description='A complex genome rearrangement simulator',
     requires=['python (>= 3.6)'],
     entry_points={'console_scripts': ['Scissor=scissor.Scissor:main']},
+    include_package_data=True,
     install_requires=['pyfaidx', 'intervaltree', 'matplotlib', 'numpy']
 )

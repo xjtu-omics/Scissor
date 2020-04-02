@@ -82,12 +82,15 @@ def parse_arguments():
     required.add_argument('-f', dest='config', help='A configure file for sequencing the alteration genome',metavar='BED', required=True)
     required.add_argument('-n', dest='prefix', help='The prefix of aligned file name', metavar='STRING', required=True)
 
+
     pbsim = parser_long.add_argument_group('pbsim parameters for FASTQ simulations')
-    pbsim.add_argument('-t', dest='seq', help='Long read (clr/ccs) sequencing technology [clr]', metavar='', default='clr')
+    pbsim.add_argument('-s', dest='seq', help='Long read (clr/ccs) sequencing technology [clr]', metavar='',default='clr')
+    pbsim.add_argument('-t', dest='threads', help='Number of cores used for alignment [4]', metavar='', default=4,type=int)
     pbsim.add_argument('-c', dest='coverage', help='Mean coverage for the simulated region [20]', metavar='', default=20.0,type=float)
     pbsim.add_argument('-a', dest='accuracy', help='Mean for simulated reads [0.90]', metavar='', default=0.90,type=float)
-    pbsim.add_argument('-l', dest='length', help='Mean length for simulated reads [8000]', metavar='', default=8000,type=int)
+    pbsim.add_argument('-l', dest='mean', help='Mean length for simulated reads [8000]', metavar='', default=8000,type=int)
     pbsim.add_argument('-r', dest='ratio', help='substitution:insertion:deletion ratio [30:30:40]', metavar='',default='30:30:40', type=str)
+
 
 
 

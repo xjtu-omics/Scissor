@@ -29,9 +29,9 @@ def run(args, seqtype):
 
         if file.endswith("h1.fa") or file.endswith("h2.fa"):
             if seqtype == 'short':
-                sim_short(args.reference, args.variation + file, label, args)
+                short_read_sequencing(args.reference, args.variation + file, label, args)
             elif seqtype == 'long':
-                sim_long(args.reference, args.variation + file, label, args)
+                long_read_sequencing(args.reference, args.variation + file, label, args)
             label += 1
 
     # Merge bams
@@ -56,7 +56,7 @@ def run(args, seqtype):
         subprocess.call(['mv', args.output + '1.srt.bam', args.output + args.prefix + '.srt.bam'], stderr=open(os.devnull, 'wb'))
         subprocess.call(['samtools', 'index', os.path.abspath(args.output + args.prefix + '.srt.bam')], stderr=open(os.devnull, 'wb'))
 
-def sim_short(ref_genome_fa, alt_genome_fa, label, args):
+def short_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
 
     for line in open(args.config, 'r'):
         tmp = line.strip().split("\t")
@@ -91,10 +91,10 @@ def sim_short(ref_genome_fa, alt_genome_fa, label, args):
 
     convert_sam(str(label), args.threads, args.output)
 
-def sim_long(ref_genome_fa, alt_genome_fa, label, args):
+def long_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
 
     model_qc = os.path.abspath(os.path.dirname(__file__) + '/model_qc_clr')
-    if args.seq:
+    if args.seq == 'ccs':
         model_qc = os.path.abspath(os.path.dirname(__file__) + '/model_qc_ccs')
 
     logging.info("Simulate reads with model ", model_qc)
@@ -215,8 +215,8 @@ def long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, vaf, args, mode
         with open(os.path.abspath(args.output + 'reference_chrom.fa'), 'w') as out:
             subprocess.call(['samtools', 'faidx', ref_genome_fa, chrom], stdout=out, stderr=open(os.devnull, 'wb'))
 
-        alt_cov = (args.cov / 100) * vaf
-        ref_cov = args.cov - alt_cov
+        alt_cov = (args.coverage / 100) * vaf
+        ref_cov = args.coverage - alt_cov
 
         subprocess.call(['pbsim', '--model_qc', model_qc, '--prefix', args.output + 'simref', '--length-mean', str(args.mean),
                          '--accuracy-mean', str(args.accuracy), '--difference-ratio', args.ratio, '--depth', str(ref_cov),
@@ -240,19 +240,17 @@ def long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, vaf, args, mode
 
         # remove the tmp reference fastq file
         os.remove(os.path.join(args.output, 'alt_chrom.fa'))
-        os.remove(os.path.join(args.output, 'alt_chrom.fa.fai'))
+        # os.remove(os.path.join(args.output, 'alt_chrom.fa.fai'))
         os.remove(os.path.abspath(args.output + 'simalt_0001.ref'))
         os.remove(os.path.abspath(args.output + 'simalt_0001.maf'))
 
     else:
-
-        subprocess.call(['pbsim', '--model_qc', args.model_qc, '--prefix', args.output + '{0}.sim'.format(chrom), '--length-mean', str(args.mean),
-             '--accuracy-mean', str(args.accuracy), '--difference-ratio', args.ratio, '--depth', str(args.cov),
-             os.path.abspath(args.output + 'alt_chrom.fa')], stderr=open(os.devnull, 'wb'),
-            stdout=open(os.devnull, 'wb'))
+        subprocess.call(['pbsim', '--model_qc', model_qc, '--prefix', args.output + '{0}.sim'.format(chrom), '--length-mean', str(args.mean),
+             '--accuracy-mean', str(args.accuracy), '--difference-ratio', args.ratio, '--depth', str(args.coverage),
+             os.path.abspath(args.output + 'alt_chrom.fa')], stderr=open(os.devnull, 'wb'), stdout=open(os.devnull, 'wb'))
 
         os.remove(os.path.join(args.output, 'alt_chrom.fa'))
-        os.remove(os.path.join(args.output, 'alt_chrom.fa.fai'))
+        # os.remove(os.path.join(args.output, 'alt_chrom.fa.fai'))
         os.remove(os.path.abspath(args.output + '{0}.sim_0001.ref'.format(chrom)))
         os.remove(os.path.abspath(args.output + '{0}.sim_0001.maf'.format(chrom)))
 
@@ -282,7 +280,7 @@ def merge_fq(output, seqtype):
     elif seqtype == 'long':
         fq_files = []
         for file in os.listdir(output):
-            if file.endswith('.sim_0001.fq'):
+            if file.endswith('.sim_0001.fastq'):
                 fq_files.append(os.path.join(output, file))
 
         with open(os.path.join(output, '{0}.fq').format(seqtype), 'w') as merged_fq:
