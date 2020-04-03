@@ -42,8 +42,8 @@ SIM requires a tab separated file with 4 columns, without header or any other li
 
 Given the rearrangement file and chromosome size file prepared, we can run SIM with the following parameters:
 
-- A template reference genome (-g). 
-- Dimension of the template reference genome (-s).
+- A template genome to implant CGRs (-g). 
+- Dimension of the template genome (-s).
 - Some regions to exclude during the simulation (-x).
 - Rearrangement file (-t).
 - Output directory (-o).
@@ -72,6 +72,8 @@ Scissor short -g reference.fa -v alt_genome_folder/ -o output_folder/ -f scissor
 # Long read sequencing
 Scissor long -g reference.fa -v alt_genome_folder/ -o output_folder/ -f scissor_config.txt -n sample_name
 ```
+
+Scissor uses NGMLR for the alignment. You can also align sequenced reads under your output directory with other aligners.
 
 ### Use cases
 

@@ -17,6 +17,7 @@ import os
 import logging
 from plot import Plot
 import sys
+import subprocess
 
 
 # contigs used to simulate rearrangements, read from chrom size file.
@@ -47,17 +48,48 @@ def run(args):
 
     logging.basicConfig(filename=os.path.abspath(out_dir + 'Scissor_SIM.log'), filemode='w', level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    print('Initialized .log file ' + os.path.abspath(out_dir + 'Scissor.log\n'))
+    print('Initialized .log file ' + os.path.abspath(out_dir + 'Scissor_SIM.log\n'))
 
+    # Remove existing FASTA files
+    files = os.listdir(out_dir)
+    if 'alt.h1.fa' in files:
+        subprocess.call(['rm', os.path.join(args.output, 'alt.h1.fa')])
+    elif 'alt.h2.fa' in files:
+        subprocess.call(['rm', os.path.join(args.output, 'alt.h2.fa')])
+
+    # Check format of required I/O
     try:
-
         with open(os.path.abspath(ref_genome_fa), 'r') as file:
-
-            assert (file.readline().startswith('>'))  # genome .file starts with '>'
-
+            assert (file.readline().startswith('>'))
     except:
         logging.error('Reference file does not exist, is not readable or is not a valid .fasta file')
         sys.exit(1)
+
+    try:
+        with open(os.path.abspath(alts_type), 'r') as alt_file:
+            assert (alt_file.readline().split("\t"))
+    except:
+        logging.error("Rearrangement file has to be TAB separated")
+        sys.exit(1)
+
+    try:
+        with open(os.path.abspath(chrom_size), 'r') as chrom_size_file:
+            assert (chrom_size_file.readline().split("\t"))
+    except:
+        logging.error("Chromosome size file has to be TAB separated")
+        sys.exit(1)
+
+    try:
+        with open(os.path.abspath(exclude_file), 'r') as exclude:
+            assert (exclude.readline().split("\t"))
+    except:
+        logging.error("Exclude region file has to be TAB separated")
+        sys.exit(1)
+
+    logging.info("Simulate rearrangement from: {0}".format(args.alts))
+    logging.info("Template genome: {0}".format(args.reference))
+    logging.info("Output directory: {0}".format(args.output))
+
 
     alt_info = out_dir + 'gr_info.bed'
     writer = open(alt_info, 'w')
@@ -82,7 +114,7 @@ def run(args):
         template = chrom_sequence[int(info[1]):int(info[2])]
         seg_pos_dict = dict(zip(ref_tokens[:-1], info[4].tolist()))
 
-        print("Modify sequence at {0}:{1}-{2} of {3}".format(chrom, info[1], info[2], info[3]))
+        # print("Modify sequence at {0}:{1}-{2} of {3}".format(chrom, info[1], info[2], info[3]))
 
         logging.info("Modify sequence at {0}:{1}-{2} of {3}".format(chrom, info[1], info[2], info[3]))
 
@@ -111,12 +143,12 @@ def run(args):
 
         Plot.run("{0}_{1}_{2}".format(info[0], info[1], info[2]), ref_seq_for_dotplot, alt_seq_for_dotplot, args)
 
-    print("Rearrangements implanted, start writing FASTA ...")
+    logging.info("Rearrangements implanted, start writing FASTA ...")
     alt_fasta = out_dir + 'alt.{0}.fa'.format(haploid)
     for chrom in ALLOWED_CONTIGS:
         ref_genome_seq = immutable_ref[chrom]
         alt_sequence = concatenate_sequence(alts_dict_by_chrom[chrom], ref_genome_seq)
-        logging.info("Modified {0}: {1}, original: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
+        logging.info("Modified {0} size: {1}, original size: {2}".format(chrom, len(alt_sequence), len(immutable_ref[chrom])))
         write_sequence(alt_fasta, chrom, alt_sequence)
 
 def create_random_regions(ref_genome, alts_type, min_size, max_size, exclude_file, chrom_size):
@@ -316,7 +348,6 @@ def load_allowed_contigs(chrom_size):
         tmp = line.strip().split('\t')
         ALLOWED_CONTIGS.append(tmp[0])
 
-
 def get_event_info(alt_segment_dict, ref_segment_info):
     """ Convert the segment information of current chromosome to string for output """
 
@@ -370,16 +401,11 @@ def invalid_sequence(seq):
 
 def load_alts_type_file(alts_type):
     alt_type_dict = {}
-    try:
-        for line in open(alts_type, 'r'):
-            tmp = line.strip().split("\t")
-            ref = tmp[1]
-            alt = tmp[2]
-            alt_type_dict[tmp[0]] = (ref, alt)
-    except:
-        logging.error("Cannot find the rearrangement type file!")
-        sys.exit(1)
-
+    for line in open(alts_type, 'r'):
+        tmp = line.strip().split("\t")
+        ref = tmp[1]
+        alt = tmp[2]
+        alt_type_dict[tmp[0]] = (ref, alt)
     return alt_type_dict
 
 def initial_var_dict():

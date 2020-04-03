@@ -16,12 +16,30 @@ import subprocess
 import glob
 import logging
 import sys
+from shutil import which
 
 def run(args, seqtype):
+
     logging.basicConfig(filename=os.path.abspath(args.output + '/Scissor_SEQ.log'), filemode='w', level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     print('Initialized .log file ' + os.path.abspath(args.output + '/Scissor_SEQ.log'))
+
+    external_tools = ['wgsim', 'ngmlr', 'pbsim', 'bwa', 'samtools']
+
+    for tool in external_tools:
+        if which(tool) is None:
+            logging.error(tool + ' was not found in the current environment.')
+    try:
+        with open(os.path.abspath(args.config), 'r') as config:
+            assert (config.readline().split("\t"))
+    except:
+        logging.error("Scissor config file has to be TAB separated")
+        sys.exit(1)
+
+    logging.info("Template genome: {0}".format(os.path.abspath(args.reference)))
+    logging.info("Variation genome: {0}".format(os.path.abspath(args.variation)))
+    logging.info("Output directory: {0}".format(os.path.abspath(args.output)))
 
     label = 1
     for file in os.listdir(args.variation):
@@ -29,9 +47,14 @@ def run(args, seqtype):
 
         if file.endswith("h1.fa") or file.endswith("h2.fa"):
             if seqtype == 'short':
+                logging.info("Short read sequencing with wgsim")
                 short_read_sequencing(args.reference, args.variation + file, label, args)
+
             elif seqtype == 'long':
+                logging.info("Long read sequencing with pbsim")
+
                 long_read_sequencing(args.reference, args.variation + file, label, args)
+
             label += 1
 
     # Merge bams
@@ -61,7 +84,6 @@ def short_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
     for line in open(args.config, 'r'):
         tmp = line.strip().split("\t")
         chrom = tmp[0]
-        logging.info("Start sequencing chrom: ", chrom)
         start = int(tmp[1])
         end = int(tmp[2])
         vaf = float(tmp[3])
@@ -71,7 +93,7 @@ def short_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
     merge_fq(args.output, 'short')
 
     # Do the alignment
-    logging.info("Start align {0} to reference {1}".format("short.r1.fq and short.r2.fq", os.path.abspath(ref_genome_fa)))
+    logging.info("Start align short.r1.fq and short.r2.fq to reference {0}".format(os.path.abspath(ref_genome_fa)))
 
     if not os.path.exists(os.path.abspath(ref_genome_fa + '.sa')):
         try:
@@ -86,9 +108,6 @@ def short_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
     with open(os.path.abspath(args.output + 'tmp.sam'), 'w') as samout:
         subprocess.call(['bwa', 'mem', '-t', str(args.threads), ref_genome_fa, os.path.abspath(args.output + 'short.r1.fq'), os.path.abspath(args.output + 'short.r2.fq')], stdout=samout, stderr=open(os.devnull, 'wb'))
 
-    # remove fastq files
-    # subprocess.call(['rm', os.path.abspath(args.output + 'short.r1.fq'), os.path.abspath(args.output + 'short.r2.fq')])
-
     convert_sam(str(label), args.threads, args.output)
 
 def long_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
@@ -97,12 +116,11 @@ def long_read_sequencing(ref_genome_fa, alt_genome_fa, label, args):
     if args.seq == 'ccs':
         model_qc = os.path.abspath(os.path.dirname(__file__) + '/model_qc_ccs')
 
-    logging.info("Simulate reads with model ", model_qc)
+    logging.info("Sequence reads with model {0}".format(model_qc))
 
     for line in open(args.config, 'r'):
         tmp = line.strip().split("\t")
         chrom = tmp[0]
-        logging.info("Start sequencing chrom: ", chrom)
         vaf = float(tmp[3])
         long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, vaf, args, model_qc)
 
@@ -272,7 +290,8 @@ def merge_fq(output, seqtype):
             cmd = ['cat'] + r2_files
             subprocess.call(cmd, stdout=merged_r2_fq)
 
-        logging.info("All sequenced reads merged to {0},{1}".format(os.path.join(output, "short.r1.fq"), os.path.join(output, "short.r2.fq")))
+        logging.info("All sequenced reads merged to {0},{1}".format(os.path.abspath(os.path.join(output, "short.r1.fq")),
+                                                                    os.path.abspath(os.path.join(output, "short.r2.fq"))))
 
         rm_cmd = ['rm'] + r1_files + r2_files
         subprocess.call(rm_cmd)
@@ -287,14 +306,12 @@ def merge_fq(output, seqtype):
             cmd = ['cat'] + fq_files
             subprocess.call(cmd, stdout=merged_fq)
 
-        logging.info("All sequenced reads merged to {0}".format(os.path.join(output, "long.fq")))
+        logging.info("All sequenced reads merged to {0}".format(os.path.abspath(os.path.join(output, "long.fq"))))
 
 def bwa_index(fasta):
     subprocess.call(['bwa', 'index', os.path.abspath(fasta)], stdout=open(os.devnull, 'wb'), stderr=open(os.devnull, 'wb'))
 
 def convert_sam(label, threads, output):
-
-    logging.info("Sort alignment and index")
 
     with open(os.path.join(output, 'tmp.bam'), 'w') as bamout:
         subprocess.call(['samtools', 'view', '-b', os.path.join(output, 'tmp.sam')], stdout=bamout, stderr=open(os.devnull, 'wb'))
@@ -304,3 +321,5 @@ def convert_sam(label, threads, output):
     with open(os.path.abspath(output + label + '.srt.bam'), 'w') as srtbamout:
         subprocess.call(['samtools', 'sort', '-@', str(threads - 1), os.path.join(output, 'tmp.bam')], stdout=srtbamout, stderr=open(os.devnull, 'wb'))
     os.remove(os.path.abspath(output + 'tmp.bam'))
+
+    logging.info("Alignment sorted")
