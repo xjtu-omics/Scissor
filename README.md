@@ -11,7 +11,7 @@ A python3.6 environment (suggested to install by Anaconda) with the following de
 - Scissor sim dependencies: intervaltree, pyfaidx, matplotlib, numpy
 - Scissor short/long dependencies: wgsim, pbsim, bwa, ngmlr
 
-All the above mentioned packages can be installed through conda command, except ngmlr. 
+All the above mentioned packages can be installed through conda command. 
 
 Afterwards, install Scissor from source.
 

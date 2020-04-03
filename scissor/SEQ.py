@@ -306,6 +306,9 @@ def merge_fq(output, seqtype):
             cmd = ['cat'] + fq_files
             subprocess.call(cmd, stdout=merged_fq)
 
+        rm_cmd = ['rm'] + fq_files
+        subprocess.call(rm_cmd)
+
         logging.info("All sequenced reads merged to {0}".format(os.path.abspath(os.path.join(output, "long.fq"))))
 
 def bwa_index(fasta):
