@@ -9,7 +9,7 @@ Scissor is a flexible tool to simulate self-defined genome rearrangements, inclu
 A python3.6 environment (suggested to install by Anaconda) with the following dependencies:
 
 - Scissor sim dependencies: intervaltree, pyfaidx, matplotlib, numpy
-- Scissor short/long dependencies: wgsim, pbsim, bwa, ngmlr
+- Scissor short/long dependencies: wgsim, pbsim, bwa, ngmlr, samtools
 
 All the above mentioned packages can be installed through conda command. 
 

@@ -243,7 +243,7 @@ def long_reads_single_chrom(ref_genome_fa, alt_genome_fa, chrom, vaf, args, mode
 
         # remove tmp files created by pbsim
         os.remove(os.path.abspath(args.output + 'reference_chrom.fa'))
-        os.remove(os.path.abspath(args.output + 'reference_chrom.fa.fai'))
+        # os.remove(os.path.abspath(args.output + 'reference_chrom.fa.fai'))
         os.remove(os.path.abspath(args.output + 'simref_0001.ref'))
         os.remove(os.path.abspath(args.output + 'simref_0001.maf'))
 
