@@ -172,7 +172,7 @@ cat exclude.bed hack.h1.bed hack.h2.bed | sortBed > exclude_new.bed
 Scissor sim -g ./output/ -s ./output/chrom.sizes.tsv -t ./output/example_type.txt -x ./output/exclude_new.bed -o ./path/to/work_dir/output/
 ```
 
-Next we sequence the diploid genome:
+Next we sequence the diploid genome (the hacked genome is under the directory specified by -v):
 
 ```
 mkdir short_reads/ && mkdir long_reads
