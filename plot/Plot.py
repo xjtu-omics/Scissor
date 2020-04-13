@@ -18,7 +18,7 @@ import os
 
 
 def run(var_id, ref, seq, args):
-    logging.info("Generate Dotplot for rearrangement {0}".format(var_id))
+    logging.info("Generate segment view for rearrangement {0}".format(var_id))
 
     k = args.kmer
     min_match = args.min_match

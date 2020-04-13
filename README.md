@@ -48,7 +48,9 @@ Given the rearrangement file and chromosome size file prepared, we can run SIM w
 - Rearrangement file (-t).
 - Output directory (-o).
 
-The program will randomly assign size to each symbol, ranging from 500bp to 10Kbp. This can be set through -l and -u options.
+The program will randomly assign size to each symbol, ranging from 500bp to 10Kbp. This can be set through -l and -u options. 
+
+**Note**: Scissor only implants CGRs to chromosomes involved in the dimension file.
 
 #### Scissor short/long
 
@@ -56,11 +58,11 @@ Short/long read sequencing of the variation genome based on wgsim and pbsim.
 
 ##### Config file
 
-A tab separated configuration file with four column for short read sequencing. This file can be easily obtained from .fai file.
+A tab separated configuration file with four column for short read sequencing. This file can be easily obtained from .fai file. 
 
 - Column1: chromosome.
-- Column2: 0.
-- Column3: length of this chromosome.
+- Column2: start position.
+- Column3: end position.
 - Column4: variant allele fraction of the rearrangement. Determine the percentage of reads from variation genome and reference genome.
 
 ##### Run short/long
@@ -135,15 +137,15 @@ cat var_chrom.sizes.tsv | sort  | awk '$2 > maxvals[$1] {lines[$1]=$0; maxvals[$
 awk 'OFS=FS="\t"''{print $1, "0", $2, "100"}' maxdims.tsv > scissor_config.txt
 ```
 
-Start sequencing with required I/O.
+Start sequencing with required I/O. (The hacked FASTA file is under ./output/ directory)
 
 ```
 cd ./output/ && mkdir short_reads && mkdir long_reads
 # Sequence short reads
-Scissor short -g ./input/reference.fa -v ./output/variation_genome.fa -o ./output/short_reads/ -f ./output/scissor_config.txt
+Scissor short -g ./input/reference.fa -v ./ -o ./output/short_reads/ -f ./output/scissor_config.txt
 
 # Sequence long reads
-Scissor long -g ./input/reference.fa -v ./output/variation_genome.fa -o ./output_dir/long_reads/ -f ./output/scissor_config.txt
+Scissor long -g ./input/reference.fa -v ./ -o ./output_dir/long_reads/ -f ./output/scissor_config.txt
 ```
 
 #### Scissor with VISOR

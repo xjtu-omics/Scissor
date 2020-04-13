@@ -44,8 +44,8 @@ def run(args, seqtype):
     label = 1
     for file in os.listdir(args.variation):
         # find each hacked haploid genome in the directory
-
         if file.endswith("h1.fa") or file.endswith("h2.fa"):
+            fai_index(file)
             if seqtype == 'short':
                 logging.info("Short read sequencing with wgsim")
                 short_read_sequencing(args.reference, args.variation + file, label, args)
@@ -313,6 +313,9 @@ def merge_fq(output, seqtype):
 
 def bwa_index(fasta):
     subprocess.call(['bwa', 'index', os.path.abspath(fasta)], stdout=open(os.devnull, 'wb'), stderr=open(os.devnull, 'wb'))
+
+def fai_index(fasta):
+    subprocess.call(['samtools', 'faidx', os.path.abspath(fasta)], stdout=open(os.devnull, 'wb'), stderr=open(os.devnull, 'wb'))
 
 def convert_sam(label, threads, output):
 

@@ -344,9 +344,13 @@ def load_exclude_regions(exclude_file):
 
 def load_allowed_contigs(chrom_size):
     """ Load contig names from the chrom size file """
+    contig_info = ''
     for line in open(chrom_size, 'r'):
         tmp = line.strip().split('\t')
+        contig_info += '{0},'.format(tmp[0])
         ALLOWED_CONTIGS.append(tmp[0])
+
+    logging.info("Implants CGRs to {0}".format(contig_info[:-1]))
 
 def get_event_info(alt_segment_dict, ref_segment_info):
     """ Convert the segment information of current chromosome to string for output """
