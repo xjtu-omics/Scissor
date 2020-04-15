@@ -16,7 +16,7 @@ All the above mentioned packages can be installed through conda command.
 Afterwards, install Scissor from source.
 
 ```
-git clone https://github.com/jiadong324/Scissor
+git clone https://github.com/xjtu-omics/Scissor.git
 cd Scissor
 python setup.py install
 ```
